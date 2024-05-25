@@ -1,0 +1,184 @@
+---
+title: 'Assignment 2: Instrumental Variables'
+author: "Thammarat Bunjaroenphornsuk 22037148 & Iván Felipe Moreno Guzmán 19438013"
+date: "2024-05"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(haven)      # To use data sets from Stata and other programs
+library(tidyverse)  # To manage data sets
+library(stargazer)  # to produce well-formatted output tables
+library(AER)        # to run IV regressions and obtain some data 
+library(knitr)      # To knit 
+options(scipen = 999)
+
+```
+
+# Part 1
+
+*You want to assess the relationship between education and income (measured as consumption expenditure) in Malawi. The dataset iv dataset1 contains information on current household consumption expenditure and completed years of schooling for 70,000 individuals from 70 schools. These individuals are former students who were randomly selected from school records and contacted to receive information on their current living standards. Assume that all schools are subject to the same rules (children start school at age 6 and the highest possible number of completed school years is 12 in all schools) and that treatment effects are homogeneous. When interpreting your results, focus on causality, effect size, and statistical significance.*
+
+```{r dataset1, results='asis'}
+data <- haven::read_dta("iv_dataset1.dta")
+
+
+## This first chunk of code just explore the data and the particular variables of interest
+stargazer(as.data.frame(data), title="Summary",
+          style = "aer")
+
+
+p1 <- ggplot(data = data, aes(x = completed_school_years)) + 
+    geom_histogram(bins = 12, fill = 'salmon', color = 'black') +
+    ggtitle("")
+p2 <- ggplot(data , aes(x = consexp)) + 
+    geom_histogram(fill = '#2D9596', color = 'black') +
+    ggtitle("")
+
+ggpubr::ggarrange(p1,p2, ncol=2,
+                  label.y = "Count" )
+
+data_summary <- data.frame(
+    Name = names(data),
+    Class = sapply(data, function(x) paste(class(x),collapse = ",")),
+    NAs = sapply(data, function(x) sum(is.na(x))),
+    Unique_Values = sapply(data, function(x) length(unique(x))),
+    stringsAsFactors = FALSE
+  )
+
+stargazer(as.data.frame(data_summary), title="Data Outlook",
+          summary = F, style = "aer",
+          column.sep.width = "2pt", 
+          rownames = F)
+
+```
+
+
+## Question 1
+
+*Run an OLS regression to investigate the effect of completed school years on consumption expenditure and interpret your results. In general, why is this approach unlikely to give you an unbiased estimate of the causal effect of educational attainment on consumption expenditure? What is an example of a likely potential source of endogeneity, and to what direction does this bias lead and why? Be as specific as possible.*
+
+```{r firstOLS, results='asis'}
+ols_reg <- lm(consexp~completed_school_years,data = data)
+
+stargazer(ols_reg,  
+          title="OLS Regression", type="latex", 
+          df=FALSE)
+
+```
+
+one extra year of education may imply an increase of xxxxx -> we can compare it with the original distribution of the variable, for example with the mean and the sd
+ommited variable: family income, overestimate the effect 
+measurment error x is problematic systematic error coudl generate endor
+
+## Question 2
+
+*One of the key reasons for the low attendance and early school dropouts in Malawi are health problems. About 35% of schools were provided with a Water, Sanitation, and Hygiene (WASH) program, which has increased average student success in these schools. Based on this information, perform an instrumental variable (IV) regression to asymptotically recover the causal effect of completed school years on consumption expenditure and interpret your results.*
+
+```{r IV, results='asis'}
+
+# Here is the code we use in class to do that
+
+#TSLS <- ivreg (Y~X|Z) # Use a dedicated command from the AER package to run IV. 
+# TSLS<-ivreg(loggdp~risk|logmort0,data=ajr_2001)
+#summary(TSLS)
+#stargazer(ols_reg, f_stage,  s_stage, TSLS, column.labels=c("Base OLS","First Stage", "Second Stage", "TSLS"), type="text")
+
+
+
+```
+
+
+## Question 3
+
+*Which treatment effect are you estimating in this setting and why?*
+
+ATE because we assume treatment effect is homogeg
+
+## Question 4
+
+*Which assumptions are necessary for the IV approach of task 2? First state the assumptions in general terms and then apply them to the specific example of this assignment. Discuss the validity of the assumptions and, to the extent possible, perform a formal test. What bias do you expect in your IV estimates and why?*
+
+To consider an instrumental variable as valid, it must fulfill three conditions: exclusion restriction, relevance and exogeneity. The first one implies that the selected instrument has no direct relation with the dependent variable of the research, and it influence is mediated by
+the instrumented variable -usually this is the most difficult condition to fulfill. The second condition is that the instrument must be relevant and should explain variation on the endogenous variable. This condition is usually revised with the significance of the first stage, regressing the independent variable with the instrument and other controls. The last condition states that the instrumental variable should be not correlated with the error.
+
+```{r IVtest}
+#summary(TSLS, diagnostic=T)
+```
+
+problem of endogei - wash services are in richest areas
+
+## Question 5
+
+*Now assume that the WASH program was randomly assigned. Does this change your answer with respect to the validity of the IV assumptions? If yes, how?*
+
+destroys relevance, correrlation z and x dissapears 
+
+## Question 6
+
+*You know that sex and age of former students are important predictors of income, so you decide to control for them in your regressions. Repeat the regressions from task 1 and task 2 with these additional controls and interpret your results. Do your results change compared to before? Why?Why not?*
+
+```{r,  results='asis'}
+# Here is the code we use in class to do that
+
+#TSLS_with_controls <- ivreg(loggdp~risk+asia + africa|logmort0 + asia + africa,data=ajr_2001) # important to add controls in first and second stage
+
+# show results 
+#stargazer(ols_reg, TSLS, TSLS_with_controls, type="text")
+```
+
+
+# Part 2
+
+*You are evaluating a randomized controlled trial (RCT) in 250 primary schools in India that aims to tackle micronutrient deficiencies. As intervention, an NGO provided schools with a “Lucky Iron Leaf”, a small iron cooking tool that infuses your meals with iron to help prevent and treat iron deficiency. Your data is provided in the dataset iv dataset2. Your research goal is to investigate the effect of the iron ingot provision on school performance. For this purpose, of the 250 schools, 125 were randomly selected to receive “Lucky Iron Leaf”. At the end of the year, student performance was assessed using a standardized test. When looking at the data, you find out that not all schools in the treatment group actually used the iron ingot, and you suspect that treatment effects may be heterogeneous.*\
+
+we cannot assumme homo - ITT
+
+## Question 1
+
+*Calculate the Intention-to-Treat effect (ITT) of iron ingot provision on student test scores and interpret your result. How does this effect differ from the conventional ATE? Why may the ITT still be of interest in the described example?*
+
+lecture 5:
+"One option is measure the ITT, i.e. the causal effect of treatment
+assignment regardless of actual participation (does not require
+further assumptions due to random assignment)"
+
+evaluate program - not just giving b
+
+```{r}
+data2 <- haven::read_dta("iv_dataset2.dta")
+```
+
+
+Effect is on the ones who receive the treatment 
+
+## Question 2
+
+*Based on the estimated ITT, derive a consistent estimate for the causal effect of the treatment on compliers and interpret your result. For this, please do not use any IV regression function. Instead, calculate the effect using your ITT estimate with the Indirect Least Squares approach. Standard errors can be ignored for this task. Briefly comment on the results.*
+
+```{r}
+### VERSION A
+# reduced form and first stage
+FS_A <- lm(X~Z) # first stage
+RF_A <- lm(Y~Z) # reduced form
+
+beta_1_A <-  coef(RF_A)[2] / coef(FS_A)[2] # reduced form / first stage
+```
+
+
+## Question 3
+
+*Replicate your results from task 2 using a “manual” Two-Stage-Least-Squares approach (2SLS), i.e. do not use any IV regression functions. Standard errors can be ignored for this task.*
+
+lecture 5 - slide 7 
+
+## Question 4
+
+*Which assumptions must be fulfilled for your estimate from task 2 and task 3 to be a local average treatment effect? Under which assumption is LATE identical to ATE? Please be specific to the analysis at hand!*
+
+
