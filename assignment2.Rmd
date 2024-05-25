@@ -89,7 +89,7 @@ However, this approach can yield a biased estimate of the causal effect of educa
 W_IV <- ivreg (consexp~completed_school_years|WASHprogram ,
                data = data)  
 
-stargazer(ols_reg, W_IV,  
+stargazer(ols_reg, W_IV, title="Instrumental Variable- WASH",
           column.labels=c("Base OLS","IV"),
           type="latex", digits = 2)
 
@@ -126,16 +126,18 @@ destroys relevance, correrlation z and x dissapears
 *You know that sex and age of former students are important predictors of income, so you decide to control for them in your regressions. Repeat the regressions from task 1 and task 2 with these additional controls and interpret your results. Do your results change compared to before? Why?Why not?*
 
 ```{r,  results='asis'}
-# Here is the code we use in class to do that
+
 ols_reg_control <- lm(consexp~completed_school_years +age+sex,
                       data = data)
 
 W_IV_control <- ivreg (consexp~completed_school_years+age+sex|WASHprogram+age+sex ,
                data = data)
 
-stargazer(ols_reg, W_IV, 
+stargazer(ols_reg, W_IV,  
           ols_reg_control,W_IV_control,
+          title="With Age and Sex controls",
           type="latex", digits = 2)
+
 
 ```
 
@@ -159,6 +161,11 @@ evaluate program - not just giving b
 
 ```{r}
 data2 <- haven::read_dta("iv_dataset2.dta")
+itt_iron <- lm(testscores~ironleaf_provided,
+                      data = data2)
+
+stargazer(itt_iron, title="ITT of iron ingot provision",
+          type="latex", digits = 2)
 ```
 
 
@@ -169,18 +176,30 @@ Effect is on the ones who receive the treatment
 *Based on the estimated ITT, derive a consistent estimate for the causal effect of the treatment on compliers and interpret your result. For this, please do not use any IV regression function. Instead, calculate the effect using your ITT estimate with the Indirect Least Squares approach. Standard errors can be ignored for this task. Briefly comment on the results.*
 
 ```{r}
-### VERSION A
-# reduced form and first stage
-#FS_A <- lm(X~Z) # first stage
-#RF_A <- lm(Y~Z) # reduced form
 
-#beta_1_A <-  coef(RF_A)[2] / coef(FS_A)[2] # reduced form / first stage
+# reduced form and first stage
+
+FS_A <- lm(ironleaf_used~ironleaf_provided,data = data2) # Compliance rate
+RF_A <- lm(testscores~ironleaf_provided,data = data2) # ITT
+
+coef(RF_A)[2] / coef(FS_A)[2] # reduced form / first stage
+
 ```
 
 
 ## Question 3
 
 *Replicate your results from task 2 using a “manual” Two-Stage-Least-Squares approach (2SLS), i.e. do not use any IV regression functions. Standard errors can be ignored for this task.*
+
+```{r}
+first_stage <- lm(ironleaf_used~ironleaf_provided, data = data2)
+second_stage <- lm(data2$testscores~first_stage$fitted.values)
+
+stargazer(second_stage, title="Two-Stage-Least-Squares approach (2SLS)", 
+          digits = 2,type="latex")
+
+```
+
 
 lecture 5 - slide 7 
 
