@@ -30,7 +30,7 @@ data <- haven::read_dta("iv_dataset1.dta")
 
 ## This first chunk of code just explore the data and the particular variables of interest
 stargazer(as.data.frame(data), title="Summary",
-          style = "aer")
+          style = "aer", digits = 2)
 
 
 p1 <- ggplot(data = data, aes(x = completed_school_years)) + 
@@ -52,7 +52,7 @@ data_summary <- data.frame(
   )
 
 stargazer(as.data.frame(data_summary), title="Data Outlook",
-          summary = F, style = "aer",
+          summary = F, style = "aer", digits = 2,
           column.sep.width = "2pt", 
           rownames = F)
 
@@ -68,13 +68,17 @@ ols_reg <- lm(consexp~completed_school_years,data = data)
 
 stargazer(ols_reg,  
           title="OLS Regression", type="latex", 
-          df=FALSE)
+          df=FALSE,  digits = 2)
 
 ```
 
-one extra year of education may imply an increase of xxxxx -> we can compare it with the original distribution of the variable, for example with the mean and the sd
-ommited variable: family income, overestimate the effect 
-measurment error x is problematic systematic error coudl generate endor
+According to the coefficients, one extra year of education may imply an increase on average of `r ols_reg$coefficients[[2]]`. This result is significant at the 5% level. -> we can compare it with the original distribution of the variable, for example with the mean and the sd.
+
+However, this approach can yield a biased estimate of the causal effect of educational attainment on consumption expenditure. The potential endogeneity problem arises from two sources: omitted variables and measurement errors in the independent variable. An example of the first issue is family income, which can influence both education outcomes and consumption expenditure, as higher-income families can afford better education and opportunities. For the second issue, systematic measurement errors (e.g., misreported income or consumption) can lead to biased results, as individuals might misreport to gain or avoid benefits.
+
+*what direction does this bias lead and why? Be as specific as possible* 
+
+
 
 ## Question 2
 
@@ -82,17 +86,17 @@ measurment error x is problematic systematic error coudl generate endor
 
 ```{r IV, results='asis'}
 
-# Here is the code we use in class to do that
+W_IV <- ivreg (consexp~completed_school_years|WASHprogram ,
+               data = data)  
 
-#TSLS <- ivreg (Y~X|Z) # Use a dedicated command from the AER package to run IV. 
-# TSLS<-ivreg(loggdp~risk|logmort0,data=ajr_2001)
-#summary(TSLS)
-#stargazer(ols_reg, f_stage,  s_stage, TSLS, column.labels=c("Base OLS","First Stage", "Second Stage", "TSLS"), type="text")
+stargazer(ols_reg, W_IV,  
+          column.labels=c("Base OLS","IV"),
+          type="latex", digits = 2)
 
 
 
 ```
-
+In this case, when the school years are instrumented by the WASH program, the coefficient is still significant but its magnitude is lower. In this case, the effect is `r W_IV$coefficients[[2]]`
 
 ## Question 3
 
@@ -104,14 +108,12 @@ ATE because we assume treatment effect is homogeg
 
 *Which assumptions are necessary for the IV approach of task 2? First state the assumptions in general terms and then apply them to the specific example of this assignment. Discuss the validity of the assumptions and, to the extent possible, perform a formal test. What bias do you expect in your IV estimates and why?*
 
-To consider an instrumental variable as valid, it must fulfill three conditions: exclusion restriction, relevance and exogeneity. The first one implies that the selected instrument has no direct relation with the dependent variable of the research, and it influence is mediated by
-the instrumented variable -usually this is the most difficult condition to fulfill. The second condition is that the instrument must be relevant and should explain variation on the endogenous variable. This condition is usually revised with the significance of the first stage, regressing the independent variable with the instrument and other controls. The last condition states that the instrumental variable should be not correlated with the error.
+To consider an instrumental variable as valid, it must fulfill two conditions: relevance and exclusion restriction. The first condition is that the instrument must be relevant and should explain variation on the endogenous variable. This condition is usually revised with the significance of the first stage, regressing the independent variable with the instrument and other controls, or checking the F statistic of the first stage. The second condition implies that the selected instrument has no direct relation with the dependent variable of the research, and it influence is mediated by the instrumented variable -usually this is the most difficult condition to fulfill and there are not formal methodologies to test it.
 
 ```{r IVtest}
-#summary(TSLS, diagnostic=T)
+summary(W_IV, diagnostic=T)
 ```
-
-problem of endogei - wash services are in richest areas
+In this case, the test shows that the instrument is not weak, meaning it effectively explains the education variable. However, there may still be an endogeneity problem, as wash services are likely situated in wealthier areas. Consequently, these services might be correlated with higher income levels, which in turn could influence both education and consumption expenditure, potentially biasing the results.
 
 ## Question 5
 
@@ -125,11 +127,16 @@ destroys relevance, correrlation z and x dissapears
 
 ```{r,  results='asis'}
 # Here is the code we use in class to do that
+ols_reg_control <- lm(consexp~completed_school_years +age+sex,
+                      data = data)
 
-#TSLS_with_controls <- ivreg(loggdp~risk+asia + africa|logmort0 + asia + africa,data=ajr_2001) # important to add controls in first and second stage
+W_IV_control <- ivreg (consexp~completed_school_years+age+sex|WASHprogram+age+sex ,
+               data = data)
 
-# show results 
-#stargazer(ols_reg, TSLS, TSLS_with_controls, type="text")
+stargazer(ols_reg, W_IV, 
+          ols_reg_control,W_IV_control,
+          type="latex", digits = 2)
+
 ```
 
 
@@ -164,10 +171,10 @@ Effect is on the ones who receive the treatment
 ```{r}
 ### VERSION A
 # reduced form and first stage
-FS_A <- lm(X~Z) # first stage
-RF_A <- lm(Y~Z) # reduced form
+#FS_A <- lm(X~Z) # first stage
+#RF_A <- lm(Y~Z) # reduced form
 
-beta_1_A <-  coef(RF_A)[2] / coef(FS_A)[2] # reduced form / first stage
+#beta_1_A <-  coef(RF_A)[2] / coef(FS_A)[2] # reduced form / first stage
 ```
 
 
